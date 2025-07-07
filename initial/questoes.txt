@@ -1,0 +1,151 @@
+Escalonadores - Three Easy Pieces
+
+1. Compute the response time and turnaround time when running three jobs of length 200 with the SJF and FIFO schedulers.
+
+    No caso de três trabalhos com tempos iguais, o FIFO e o SJF serão iguais, pois o Shortest Job First será o que chegar primeiro tendo em vista que eles têm a mesma duração - logo, FIFO e SJF funcionarão de maneira parecida nesse caso.
+
+    Chamarei os trabalhos de A, B e C, respectivamente - por ordem de chegada.
+
+    O turnaround time é o tempo que os trabalhos são completos e é calculo da seguinte maneira: Ttt = Ttérmino - Tchegada.
+    O response time é o tempo de resposta de um processo - tempo que ele inicia sua execução. é calculado da seguinte forma: Trt = Tinicio - Tchegada.
+
+    O turnaround time para o FIFO e SJF de A será de 200 (200 - 0). Para B será de 400 (400 - 0). Para C será 600 (600 - 0).
+    O turnaround time médio será de:
+    (200 + 400 + 600) / 3 = 1200 / 3 = 400ms
+
+    O response time para A será de 0 (0 - 0). Para B será 200 (200 - 0). Para C será 400 (400 - 0).
+    O response time médio será:
+    (0 + 200 + 400) / 3 = 600 / 3 = 200ms
+
+2. Now do the same but with jobs of different lengths: 100, 200, and 300.
+
+    Para trabalhos de tamanhos diferentes, o FIFO e o SJF mudará.
+
+    Pontos importantes: Sem E/S e sem preempções (interrupções de processo).
+
+    Seguirei a ordem de chegada que decrescente ao tempo do processo: 300, depois 200, depois 100. Os chamarei de A, B e C, respectivamente.
+
+    FIFO: Primeiro a chegar, primeiro a ser executado.
+    No FIFO:
+    A, response time de 0 e turnaround time de 300.
+    B, response time de 300 e turnaround time de 500.
+    C, response time de 500 e turnaround time de 600.
+    A média de turnaround time será de (500 + 300 + 600) / 3 = 1400 / 3 = ~466.67ms
+    A média de response time será de (0 + 500 + 300) / 3 = 800 / 3 = ~266.67ms
+    Efeito comboio ocorre (convoy effect): Menores ficam presos aytrás de processos maiores.
+
+    SJF: Processo mais curto tem prioridade.
+    No SJF:
+    C, response time de 0 e turnaround time de 100.
+    B, response time de 100 e turnaround time de 300.
+    C, response time de 300 e turnaround time de 600.
+    A média de turnaround time será de (100 + 300 + 600) / 3 = 1000 / 3 = ~333.33ms
+    A média de response time será de (0 + 100 + 300) / 3 = 400 / 3 = ~133.33ms
+
+3. Now do the same, but also with the RR scheduler and a time-slice of 1.
+
+    Round Robin (RR) é um algoritmo que busca justiça (fairness) em detrimento de prioridade. Nenhum processo tem prioridade em cima de outro, independente do seu tempo de duração ou importância.
+    No RR, os processos são colocados numa fila cíclica. Quando o time slice pré-determinado chega, o processo é interrompido e passa para o próximo processo (context switch). Isso ocorre até os processos finalizarem.
+    Time slice é o tempo que cada processo será executado até ser pausado (ou finalizado) e passar para o próximo.
+
+    Para três processos: A de 100ms; B de 200ms; e C de 300ms.
+    O turnaround time de um escalonador RR com 1 para A será de 298ms, B será de 499ms (A já terminou) e C será de 600ms (B e C já terminaram). Tempo médio de turnaround = 465.67ms.
+    O response time será de 0ms para A, 1ms para B e 2ms para C. Tempo médio de resposta = 1ms.
+    
+4. For what types of workloads does SJF deliver the same turnaround times as FIFO?
+
+    Para processos com a mesma duração ou quando eles chegam numa ordem descrescente de duração -> sem E/S e sem preempções e overlaps.
+
+5. For what types of workloads and quantum lengths does SJF deliver the same response times as RR?
+
+    Se o time slice do RR for igual ou maior ao tempo de duração do trabalho mais longo e eles chegarem em ordem descrescente de duração. Ou, caso só tenha um trabalho a ser realizado.
+
+6. What happens to response time with SJF as job lengths increase? Can you use the simulator to demonstrate the trend?
+
+    Os trabalhos maiores demorarão mais a iniciar sua execução. Ou seja, o response time desses trabalhos serão maiores - e o response time médio, também.
+    Pode levar a starvation (inanição/fome) - processos do final do escalonador nunca são executados.
+
+7. What happens to response time with RR as quantum lengths increase? Can you write an equation that gives the worst-case response time, given N jobs?
+
+    O response time aumenta è medida que o time slice aumenta.
+    Pior cenário: Time slice igual ou maior à duração do maior processo - preempção nunca ocorre. Isso fará o RR se comportar como uma fila normal (FIFO) e pode causar starvation [(inanição/fome) - processos do final do escalonador nunca são executados].
+
+---
+
+Paralelismo - Introdução - Three Easy Pieces
+
+What support do we need from the hardware in order to build useful synchronization primitives? What support do we need from the OS?
+    
+    Do hardware, precisamos de uma coleção de instruções atômicas. Instruções indivisiveis (uma vez iniciadas, elas rodam até o fim - ou nem iniciam). Isso é crucial pois permite a leitura e modificação de um espaço de memória sem a interferência de outra thread durante o processo.
+        Test-and-Set: Testa e, na mesma instrução, dá valor àquele espaço de memória - evitando interrupções no meio.
+        Compare-and-Swap: Três argumentos (posição de memória, valor esperado e novo valor). Ela checa se o valor no espaço de memória é o esperado - se for, ele atualiza aquele espaço de memória com o novo valor e retorna true. Caso seja falso, nada acontece e ele retorna falso.
+        Fetch-and-Add: Incrementa um valor no espaço de memória e retorna o valor antigo.
+    
+    Do OS, precisamos evirar os problemas que as operações atômicas podem causar, como o busy-waiting.
+    O OS provê, para isso: as wait queues (filas de espera) - filas internas mantidas pelo OS que esperam por um evento especifico; e os sleep/wake up mechanism (blocking) (mecanismo de suspensão/retomada, ou bloqueador) - chamadas de sistema que permite que uma thread voluntariamente desista da CPU e entre em repouso (ser movida para a fila de espera, por exemplo). Quando o evento esperado ocorre uma nova chamada de sistema é feita e o OS chama da fila de espera uma thread que estava em repouso (da fila de espera para a fila de "pronto"). Atualmente, "futeX" (Fast Userspace Mutex).
+
+
+
+How can we build these primitives correctly and efficiently? How can
+programs use them to get the desired results?
+
+    As melhores primitivas de sincronização são construídas combinando o hardware e o OS em uma abordagem hibrida.
+    Uma boa implementação mutex acontece assim:
+        1- Uma thread aguarda a lock usando uma rápida instrução atômica de hardware (compare-and-swap, por exemplo). Caso verdadeiro, a thread entra na seção crítica imediatamente. Isso acontece sem interferência do SO;
+        2- Se a instrução atômica falha, a thread faz uma chamada de sistema para o SO - colcoa a thread em repouso em uma fila de espera associada aquele lock;
+        3- Quando a thread daquele lock acaba, ele libera o lock (usando uma instrução atômica) e faz outra chamada de sistema para o SO para acordar uma das threads em repouso da fila de espera.
+
+    Esse modelo híbrido é eficiente pois ele evita busy-waiting quando tem contenção e é correto, pois ele depende das instruções atômicas do hardware para garantir uma exclusão mútua.
+
+    Os programas usam primitivas para proteger setroes críticos (blocos do código que acessam recursos compartilhadas que devem evitar threads diferentes acessando ao mesmo tempo). O protocolo é simples, mas rigoroso:
+        1- Obtenção. Antes de entrar em setor crítico, a thread eve adquirir o lock. Se outra thread já o tem, a thread atual espera;
+        2- Execução. Uma vez adquirido o lock, a thread pode acessar, de forma segura, o recurso compartilhado dentro daquele setor crítico. E apenas ela pode naquele momento;
+        3- Liberação. Após deixar a seção crítica, a thread deve soltar o lock. Esquecer de soltar o lock resulta em outras threads esperarem eternamente por ele - deadlock.
+
+---
+
+Thread API - Three Easy Pieces
+
+What interfaces should the OS present for the thread creation and control? How should theses interfaces be designed to enable ease of use as well as utility?
+
+    Para controler e criar threads, o mínimo que um SO deve fazer é ter uma API que permita criar e controlar threads. Essas APIs geralmente são fornecidas por meio de bibliotecas, como  POSIX Threads (Pthreads).
+    As operações fundamentais da Pthread são: criação; conclusão; bloqueio (locking); e espera condicional.
+
+    Uma boa API de threads deve ser projetada com os seguintes princípios:
+        1 - Simplicidade e Intuitividade;
+        2 - Flexibilidade;
+        3 - Componibilidade e Modularidade - Mecanismo (como fazer) de política (o que fazer);
+        4 - Desempenho e Eficiência;
+        5 - Gerenciamento de Recursos Abstraído.
+
+---
+
+Provas antigas e monitoria
+
+1. Um parâmetro importante do round-robin é o time-slice (ou quantum). Este parâmetro precisa ser arbitrado. O que você levaria em conta para determinar de maneira adequada esse parâmetro? Que informações você gostaria de ter para fazer uma boa escolha?
+
+    Para escolher o time-slice, precisamos levar em conta o custo to context switch (troca de contexto), pois essa tende a ser a operação mais custosa do RR caso mal implementado.
+    O quantum deve ser significativamente maior que o tempo do context switch da máquina, pois queremos que a máquina passe mais tempo executando nosso programa que trocando de contexto (tempo desperdiçado).
+    Outras coisas importantes são: Tempo médio de execução dos processos, quantidade de processos a serem executados e quais tipos de processos. Além disso, precisamos ver se o sistema tem muitos E/S e quanto tempo duram, em média.
+    Time-slice muito pequeno: Muito tempo desperdiçado com o context switch.
+    Time-slice muito grande: RR se comporta semelhante a um escalonador FIFO - igual caso o time-slice seja igual ou maior à duração do maior processo.
+
+    A escolha do time-slice é um balanceamento entre essas variáveis que depende bastante do contexto da aplicação e da máquina.
+
+    Geralmente, atualmente esse valor varia entre 10-100ms.
+
+2. Sistemas construídos com múltiplos processos/threads podem melhorar sua eficiência. Já eram úteis mesmo em uma época em que as máquinas tinham somente um processador. Explique como esses sistemas eram capazes de melhorar o desempenho/eficiência (em comparação ao cenário em que o sistema tem um único fluxo de processamento).
+
+    Com um único fluxo de processamento, a CPU fica ociosa durante muito tempo, principalmente em operações E/S (I/O-Bound), perdendo tempo.
+    Usando threads, podemos pegar o tempo que a CPU fica ociosa durante um processo e interrompê-lo (preempção e overlap) e começar/continuar a execução do próximo, aumentando a eficiência (de tempo). Dessa maneira, aproveitamos, na maior parte do tempo, a CPU trabalhando ao máximo possível (CPU-Bound).
+    Aumento de vazão (throughput): Sistema completa mais tarefas no mesmo período de tempo, maximizando o trabalho da CPU. Crucial para sistemas interativos (um processo não trava o outro).
+    A thread permite que o sistema sobreponha o tempo de espera de um processo com o tempo de computação de outro.
+
+3. A imagem de um processo em memória é dividida em regiões: data, bss, stack, heap e code. Sabemos que data e bss armazenam conteúdo estático. Por sua vez, stack e heap armazenam conteúdo alocado dinamicamente na memória (ou seja, conteúdo que tem tempo de vida menor que o tempo de vida do programa; pode ser alocado após o início da execução do programa e pode deixar de ser usado antes do fim do programa). Imagine que em um sistema operacional a imagem de um processo não tivesse heap. Quais seriam as limitações/desvantagens deste SO? Em outras palavras, qual a vantagem de ter uma heap?
+
+    O heap permite que a memória alocada sobreviva ao escopo da função que a criou. Sem heap, teríamos uma limitação: teríamos apenas a stack (LIFO) - que está intrissecamente ligada ao escopo da função. Quando uma função retorno, a stack é liberada. Além disso, a stack é limitada, enquanto o heap permite uma alocação bem maior de volume de dados.
+    O heap, logo, permite flexibilidade e poder ao programa.
+
+4. O que é um processo?
+
+    Processo é uma estrutura de dados que guarda informações importantes sobre um programa em execução. informações como, id (pid), tempo de execução e quem iniciou o programa.
