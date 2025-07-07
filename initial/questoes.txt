@@ -67,7 +67,7 @@ Escalonadores - Three Easy Pieces
 
 7. What happens to response time with RR as quantum lengths increase? Can you write an equation that gives the worst-case response time, given N jobs?
 
-    O response time aumenta è medida que o time slice aumenta.
+    O response time aumenta à medida que o time slice aumenta.
     Pior cenário: Time slice igual ou maior à duração do maior processo - preempção nunca ocorre. Isso fará o RR se comportar como uma fila normal (FIFO) e pode causar starvation [(inanição/fome) - processos do final do escalonador nunca são executados].
 
 ---
