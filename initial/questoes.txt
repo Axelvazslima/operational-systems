@@ -120,6 +120,29 @@ What interfaces should the OS present for the thread creation and control? How s
 
 ---
 
+Lock - Three Easy Pieces
+
+    How can we build an efficient lock? Efficient locks provide mutual exclusion at low cost, and also might attain a few other properties we discuss below.
+    
+        Um lock eficiente deve ser contruído analisando com cuidado o que são as seções críticas e lembrando sempre de adquirir (antes de entrar) e liberar locks (após sair da seção crítica).
+
+        Devemos pensar quais são os objetivos do lock e pensar em qual abordagem vale a pena. Pensando puramente em performance, tendemos a usar um fine-grained locking (locking de granulidade fina) para permitir paralelismo e ganho de performance.
+
+        O que analisar em um lock? Ele provê uma exclusão mútua? Ele é justo (todas as threads tem uma chance real de adquirir aquele lock ou alguns se sobressaem muito em relação a outros causando starvation)? O critério final é a perfomance. Devemos garantir a funcionalidade e corretude do nosso lock para, então, pensa em otimizá-lo.
+    
+    What hardware support is needed? What OS support?
+
+        O suporte de hardware necessário são as instruções atômicas (exemplos: "test-and-set", "fetch-and-add" e "compare-and-swap"). Essas instruçõs garantem que a thread nesse momento fará uma ação atômica: ou ela inicia e vai até o fim da operação, sem interrupções, ou ela não inicia. É, à grosso modo, um "tudo ou nada".
+
+        Sem o suporte do hardware e operações atômicas, é impossível ter exclusões mútuas eficazes.
+
+        Suporte do OS: O SO provê a capacidade uma thread "descansar" (basicamente, pausar) e ser retomada depois. Isso evita ciclos inúteis de CPU.
+
+        O OS provê: chamadas de sistema para descansar e retomar; filas de espera.
+
+        Em busca da eficiência, buscamos um modelo híbrido que une as duas implementações (no UNIX, o mutex)
+---
+
 Provas antigas e monitoria
 
 1. Um parâmetro importante do round-robin é o time-slice (ou quantum). Este parâmetro precisa ser arbitrado. O que você levaria em conta para determinar de maneira adequada esse parâmetro? Que informações você gostaria de ter para fazer uma boa escolha?
