@@ -108,3 +108,73 @@ void lock(lock_t *lock){
 
 If the value at the specified address is equal to expected, update the memory location. Else, do nothing.
 
+## Fetch-and-Add - And Lock and Unlock
+
+Atomically increments a value while returning the old value at a praticular address.
+
+```C
+int FetchAndAdd(int *ptr){
+    int old = *ptr;
+    *ptr = old + 1;
+    return old;
+}
+```
+
+---
+
+### Lauer's Law
+
+Given double the time, the same code be produced in half the lines.
+
+---
+
+**Lock and Unlock**: Instead of a single value, it uses a ticket and turn variable in combination to build a lock. When a thread wishes to acquire a lock, it first does ana tomic fetch-and-add on the ticket value; that value is now considered this thread's turn.
+
+The globally shared lock->turn is then used to deterine which thread's turn it is. `myturn == turn`.
+
+    It ensures progress for all threads based on ticket values.
+
+## How and why to Avoid Spinning?
+
+Hadware alone can not solve this spinning problem. It needs **OS support**.
+
+Sometimes it may endlessly spin - specially if the thread holds the lock gets forcefully interrupted -> Main issue: performance.
+
+### Priority Inversion
+
+It is not just about *performance*, but **correctness**.
+
+    A higher-priority thread waiting for a lower-priority thread can temporarily boost the lower thread's priority, thus enabling it to run and overcoming the inversion - priority inheritance.
+
+The solution? Ensure all threads have the **same priority**.
+
+## Just Yield
+
+    What to do when a context switch occurs in a critical section, and threads starts to spin endlessly, waiting for the interrupted lock-holding thread to be run again?
+
+Yield basically just moves the caller from the *running* state to the *ready* state and thus promotes another thread to *running*.
+
+    The thread uses yield to essentially deschedules itself.
+
+This approach **does not address starvation** - a thread may get caught in an endless yield loop while other threads repeatedly enter and exit the critical section.
+
+## Using Queues: Sleeping Instead of Spinning
+
+    Explicitly exert some control over which thread next gets to acquire the lock after the current holder releases it is a must.
+
+`park()` - puts the calling thread to sleep;
+
+`unpark(threadID)` - wakes a particular thread up.
+
+---
+
+### Wakeup/waiting race
+
+With the worng timing, a thread will be about to park, assuming that it should sleep until the lock is no longer held.A switch at that time to another thread could lead to issues if, for example, that thread then released the lock.
+
+The subsequent park by the first thread would then potentially sleep forever.
+
+`setpark()` - It is solved by the thread indicating it is about to park.
+
+---
+

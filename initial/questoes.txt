@@ -141,6 +141,13 @@ Lock - Three Easy Pieces
         O OS provê: chamadas de sistema para descansar e retomar; filas de espera.
 
         Em busca da eficiência, buscamos um modelo híbrido que une as duas implementações (no UNIX, o mutex)
+
+How can we develop a lock that doesn’t needlessly waste time spinning on the CPU?
+
+    Usando uma primitiva do sistema operacional chamada `yield()` - uma thread pode chamar para desistir da CPU e deixar outra thread iniciar.
+
+
+
 ---
 
 Provas antigas e monitoria
@@ -171,4 +178,47 @@ Provas antigas e monitoria
 
 4. O que é um processo?
 
-    Processo é uma estrutura de dados que guarda informações importantes sobre um programa em execução. informações como, id (pid), tempo de execução e quem iniciou o programa.
+    Processo é uma estrutura de dados do kernel que guarda informações importantes sobre um programa em execução. informações como, id (pid), tempo de execução e quem iniciou o programa.
+
+5. Considere um escalonador para requisições de um serviço de larga escala que roda
+em uma cloud. Este serviço tem vários módulos de processamento de requisições que
+executam em um conjunto de máquinas. Um escalonador neste caso precisa decidir,
+dado um conjunto de requisições pendentes, como distribuir estas requisições para
+os módulos de processamento. Um algoritmo possível é o round-robin. Neste caso,
+são mantidas, no escalonador, uma lista de requisições pendentes e uma lista de
+identificadores para os módulos de processamento. A primeira requisição é enviada
+para o primeiro módulo, a segunda para o segundo módulo e assim por diante (note
+que a quantidade de requisições tipicamente é maior que a quantidade de módulos
+de processamento), até iniciar novamente a distribuição para o primeiro módulo.
+Considere que cada módulo mantém uma fila de requisições recebidas (para
+simplificar, considere que a fila pode crescer de maneira ilimitada). O tempo de
+resposta de uma requisição é dado pelo tempo que a requisição passou na fila
+somado ao tempo de serviço da execução da requisição da requisição pelo módulo de
+processamento. Considerando um número T de requisições que precisam ser
+escalonadas em P módulos de processamento, round-robin é um algoritmo
+interessante caso as requisições tenham o mesmo tamanho (teriam tempo de execução
+equivalentes caso executasse em máquinas iguais) e o poder de processamento dos
+módulos sejam iguais.
+
+a. Considere que os módulos de processamento possam ter diferentes poderes de
+processamento. Que problema(s) esse algoritmo apresentaria se utilizado sem
+modificação?
+
+    O RR apresentaria diversos problemas em um ambiente heterogêneo, como: o acúmulo de fila nos módulos mais lentos; ociosidade dos módulos rápidos; aumento drástico do tempo de resposta médio e pior caso.
+    O RR nesse caso é ineficiente e injusto - sobrecarrega os fracos e subutiliza os fortes.
+
+b. Considere que os poderes de processamento relativos são conhecidos (ou
+seja, para qualquer dois módulos de processamento Pi e Pj, é possível saber
+quantas vezes Pi é mais poderoso que Pj). Como você melhoraria o sistema
+acima para tirar proveito dessa informação. Explique o seu novo design e
+suas vantagens em relação ao algoritmo básico apresentado.
+
+    Nesse caso, a adoção de uma variação do RR se faz interessante: o Weighted Round-Robin (Round-robin Ponderado).
+    Esse algoritmo envia mais trabalho para os módulos mais fortes e menos, para os mais fracos. Como conhecemos os poderes de processamento dos módulos, faríamos isso de maneira proporcional à quanto cada módulo aguenta sem afetar o sistema.
+        Primeiro, atribuímos um peso inteiro para cada módulo de processamento proporcional ao seu poder relativo.
+        Segundo, o escalonador agora usa esses pesos para determinar quantas requisições enviar a cada módulo em um "super-ciclo".
+    Uma maneira mais simples ainda é criar uma lista de servidores que reflete os pesos e aplicar o Round-Robin simples sobre ela. O escalonador simplesmente percorreria essa lista de forma cíclica, enviando uma requisição ao servidor por vez.
+
+    Vantagens: Balanceamento de carga; Maximiza a vazão (requisições processadas por unidade de tempo); redução e previsibildade do tempo de resposta.
+
+    O Weighted Round-Robin transforma um ambiente ineficiente e injusto em um ambiente eficiente, balanceado e justo.
